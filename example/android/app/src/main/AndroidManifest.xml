@@ -1,5 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.INTERNET"
+        tools:ignore="ManifestOrder" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <application
         android:label="fvp_example"
         android:name="${applicationName}"
@@ -40,25 +49,4 @@
             android:name="io.flutter.embedding.android.EnableImpeller"
             android:value="true" />
     </application>
-    <!--
-      Internet access permissions.
-      -->
-    <uses-permission android:name="android.permission.INTERNET"
-        tools:ignore="ManifestOrder" />
-      <!--
-        Media access permissions.
-        Android 13 or higher.
-        https://developer.android.com/about/versions/13/behavior-changes-13#granular-media-permissions
-        -->
-      <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-      <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-      <!--
-        Storage access permissions.
-        Android 12 or lower.
-        -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        tools:ignore="ScopedStorage" />
-    <!-- MODIFY_AUDIO_SETTINGS is needed to use audio effects such as environmental reverb -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 </manifest>

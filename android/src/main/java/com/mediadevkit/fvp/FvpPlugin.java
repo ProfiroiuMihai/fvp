@@ -102,8 +102,8 @@ public class FvpPlugin implements FlutterPlugin, MethodCallHandler {
                   }
 
                   @Override
-                  public void onSurfaceCleanup() {
-                    Log.d("FvpPlugin", "SurfaceProducer.onSurfaceCleanup for textureId " + texId);
+                  public void onSurfaceDestroyed() {
+                    Log.d("FvpPlugin", "SurfaceProducer.onSurfaceDestroyed for textureId " + texId);
                     textures.remove(texId);
                     nativeSetSurface(handle, texId, null, 0, 0, tunnel);
                   }
