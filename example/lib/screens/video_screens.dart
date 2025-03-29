@@ -118,9 +118,7 @@ class _VideoScreenState extends State<VideoScreen> {
                               height: 250,
                               child: VideoPlayerWidget(
                                 videoUrl: video.path,
-                                isAsset: false,
-                                showControls: true,
-                                disableHDR: true,
+                                isAsset: false
                               ),
                             ),
                           ],

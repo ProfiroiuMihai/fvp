@@ -9,35 +9,79 @@ class VideoOptimizer {
   // Static counter for HDR videos - only allow one playing with HDR enabled
   static int _activeHdrCount = 0;
 
-  // Detect if the video is HDR content
+  // Improved HDR detection that better identifies all HDR formats including Dolby Vision
   static bool isHdrContent(MediaInfo? mediaInfo) {
-    if (mediaInfo == null ||
-        mediaInfo.video == null ||
-        mediaInfo.video!.isEmpty) return false;
+    if (mediaInfo == null || mediaInfo.video == null || mediaInfo.video!.isEmpty) return false;
 
     final videoInfo = mediaInfo.video![0];
     final metadata = videoInfo.metadata;
+    final codec = videoInfo.codec;
 
-    // Check common HDR indicators in metadata
-    if (metadata.containsKey('color_space') &&
-        metadata['color_space'] == 'BT.2020') return true;
-    if (metadata.containsKey('color_transfer') &&
-        (metadata['color_transfer'] == 'SMPTE ST 2084' ||
-            metadata['color_transfer'] == 'PQ' ||
-            metadata['color_transfer'] == 'HLG')) return true;
-    if (metadata.containsKey('color_primaries') &&
-        metadata['color_primaries'] == 'bt2020') return true;
-    if (metadata.containsKey('hdr_format') &&
-        (metadata['hdr_format']!.contains('HDR10') ||
-            metadata['hdr_format']!.contains('Dolby Vision'))) return true;
+    // Check codec format - 10bit and above formats often indicate HDR content
+    final format = codec.formatName?.toLowerCase() ?? '';
+    final is10BitOrHigher = format.contains('10le') || format.contains('10be') ||
+        format.contains('12le') || format.contains('12be') ||
+        format.contains('16le') || format.contains('16be');
 
-    // Check for 10-bit HEVC which is common for HDR
-    final codec = videoInfo.codec.codec.toLowerCase();
-    final is10BitHevc = codec.contains('hevc') &&
-        metadata.containsKey('bits_per_raw_sample') &&
-        metadata['bits_per_raw_sample'] == '10';
+    // Check codec - HEVC/H.265 is commonly used for HDR
+    final isHevcCodec = codec.codec.toLowerCase().contains('hevc') ||
+        codec.codec.toLowerCase().contains('h265');
 
-    return is10BitHevc;
+    // Look for HDR indicators in metadata
+    final containsHdrMetadata =
+        (metadata.containsKey('color_space') &&
+            (metadata['color_space'] == 'BT.2020' || metadata['color_space']?.contains('2020') == true)) ||
+            (metadata.containsKey('color_transfer') &&
+                (metadata['color_transfer'] == 'SMPTE ST 2084' ||
+                    metadata['color_transfer'] == 'PQ' ||
+                    metadata['color_transfer'] == 'HLG' ||
+                    metadata['color_transfer']?.contains('2084') == true ||
+                    metadata['color_transfer']?.contains('hlg') == true)) ||
+            (metadata.containsKey('color_primaries') &&
+                (metadata['color_primaries'] == 'bt2020' || metadata['color_primaries']?.contains('2020') == true)) ||
+            (metadata.containsKey('hdr_format') &&
+                (metadata['hdr_format']!.contains('HDR') ||
+                    metadata['hdr_format']!.contains('Dolby')));
+
+    // Check profile - profiles 2 (Main10) and higher in HEVC often indicate HDR
+    final hasHdrProfile = isHevcCodec && codec.profile >= 2;
+
+    // Additional checks for Dolby Vision
+    final hasDolbyVisionIndication =
+        metadata.containsKey('encoder') && metadata['encoder']?.contains('Dolby') == true ||
+            metadata.containsKey('comment') && metadata['comment']?.contains('Dolby') == true ||
+            metadata.containsKey('handler_name') && metadata['handler_name']?.contains('Dolby') == true;
+
+    // Extra check for MP4 container tags that might indicate Dolby Vision
+    final isDolbyVisionContainer =
+        mediaInfo.metadata.containsKey('major_brand') &&
+            (mediaInfo.metadata['major_brand']?.contains('dvh') == true ||
+                mediaInfo.metadata['major_brand']?.contains('dvhe') == true);
+
+    // Combined check for any 10-bit HEVC content
+    final is10BitHevc = isHevcCodec &&
+        (is10BitOrHigher || format == 'yuv420p10le' || format == 'yuv420p10' ||
+            metadata.containsKey('bits_per_raw_sample') &&
+                (metadata['bits_per_raw_sample'] == '10' ||
+                    (int.tryParse(metadata['bits_per_raw_sample'] ?? '0') ?? 0) >= 10));
+
+    // Print debug info to help identify why we think it's HDR or not
+    print('HDR detection for ${codec.codec}:');
+    print('- Format: ${codec.formatName}');
+    print('- 10bit+: $is10BitOrHigher');
+    print('- HEVC: $isHevcCodec');
+    print('- HDR metadata: $containsHdrMetadata');
+    print('- HDR profile: $hasHdrProfile');
+    print('- Dolby Vision indications: $hasDolbyVisionIndication');
+    print('- Dolby Vision container: $isDolbyVisionContainer');
+    print('- 10-bit HEVC: $is10BitHevc');
+
+    // Return true if any of the HDR indicators are present
+    return containsHdrMetadata ||
+        hasDolbyVisionIndication ||
+        isDolbyVisionContainer ||
+        is10BitHevc ||
+        hasHdrProfile;
   }
 
   // Apply HDR optimizations - use for single primary HDR video
@@ -52,14 +96,14 @@ class VideoOptimizer {
   // Apply non-HDR optimizations - use for multiple videos or when HDR is disabled
   static void applyNonHdrOptimizations(VideoPlayerController controller) {
     // Disable HDR processing for better performance
-    // controller.setVideoDecoders(['FFmpeg']);
-    // controller.setProperty('video.hdr', '0');
+    controller.setVideoDecoders(['FFmpeg']);
+    controller.setProperty('video.hdr', '0');
 
-    // // Apply color correction for better SDR appearance
-    // controller.setProperty('video.color_range', 'full');
-    // controller.setProperty('video.color_primaries', 'auto');
-    // controller.setProperty('video.color.space', 'bt709');
-    // controller.setProperty('video.color.gamma', '2.2');
+    // Apply color correction for better SDR appearance
+    controller.setProperty('video.color_range', 'full');
+    controller.setProperty('video.color_primaries', 'auto');
+    controller.setProperty('video.color.space', 'bt709');
+    controller.setProperty('video.color.gamma', '2.2');
   }
 
   // Release HDR slot when video is disposed
@@ -142,7 +186,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           setState(() {
             _hasError = true;
             _errorMessage =
-                'Error playing video: ${_controller.value.errorDescription}';
+            'Error playing video: ${_controller.value.errorDescription}';
           });
         }
         if (mounted) {
@@ -185,15 +229,19 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       MediaInfo? mediaInfo = _controller.getMediaInfo();
       _isHdrVideo = VideoOptimizer.isHdrContent(mediaInfo);
 
+      print("Is this video HDR? $_isHdrVideo");
+
       // If this is HDR content AND we can enable HDR (no other HDR videos playing)
       // AND user hasn't explicitly disabled HDR
-      // if (_isHdrVideo && VideoOptimizer.canUseHdr() && !widget.disableHDR) {
+      if (_isHdrVideo  && !widget.disableHDR) {
+        print("Applying HDR optimizations");
         // Apply HDR optimizations
         VideoOptimizer.applyHdrOptimizations(_controller);
-      // } else {
-      //   // Apply non-HDR optimizations for better performance with multiple videos
-      //   VideoOptimizer.applyNonHdrOptimizations(_controller);
-      // }
+      } else {
+        print("Applying non-HDR optimizations");
+        // Apply non-HDR optimizations for better performance with multiple videos
+        VideoOptimizer.applyNonHdrOptimizations(_controller);
+      }
     } catch (e) {
       print('Error applying video optimizations: $e');
     }
