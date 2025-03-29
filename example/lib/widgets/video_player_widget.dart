@@ -187,13 +187,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
       // If this is HDR content AND we can enable HDR (no other HDR videos playing)
       // AND user hasn't explicitly disabled HDR
-      if (_isHdrVideo && VideoOptimizer.canUseHdr() && !widget.disableHDR) {
+      // if (_isHdrVideo && VideoOptimizer.canUseHdr() && !widget.disableHDR) {
         // Apply HDR optimizations
         VideoOptimizer.applyHdrOptimizations(_controller);
-      } else {
-        // Apply non-HDR optimizations for better performance with multiple videos
-        VideoOptimizer.applyNonHdrOptimizations(_controller);
-      }
+      // } else {
+      //   // Apply non-HDR optimizations for better performance with multiple videos
+      //   VideoOptimizer.applyNonHdrOptimizations(_controller);
+      // }
     } catch (e) {
       print('Error applying video optimizations: $e');
     }

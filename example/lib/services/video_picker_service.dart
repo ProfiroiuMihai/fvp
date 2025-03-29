@@ -1,11 +1,9 @@
 import 'dart:io';
-import 'package:hl_image_picker/hl_image_picker.dart';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class VideoPickerService {
-  static final HLImagePicker _picker = HLImagePicker();
-  static bool _isPickerActive = false; // Add a lock variable
+  static bool _isPickerActive = false; // Keep the lock variable
 
   static Future<bool> requestPermissions() async {
     if (Platform.isAndroid) {
@@ -31,26 +29,19 @@ class VideoPickerService {
         return null;
       }
 
-      // Use hl_image_picker to select a video with HDR support
-      final List<HLPickerItem> videos = await _picker.openPicker(
-        pickerOptions: HLPickerOptions(
-          mediaType: MediaType.video,
-          maxSelectedAssets: 1,
-          enablePreview: true,
-          // Ensure no max file size limit which might filter out large HDR videos
-          maxFileSize: null,
-          // Optional: You might need to increase this if your HDR videos are long
-          maxDuration: null,
-        ),
+      // Use file_picker to select a video file
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: false,
       );
 
-      if (videos.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         _isPickerActive = false; // Unlock if no selection
         return null;
       }
 
       // Get the raw file path
-      final String? path = videos.first.path;
+      final String? path = result.files.single.path;
       if (path == null || path.isEmpty) {
         _isPickerActive = false; // Unlock if no path
         return null;
@@ -89,29 +80,22 @@ class VideoPickerService {
         return [];
       }
 
-      // Use hl_image_picker for multiple videos with enhanced HDR support
-      final List<HLPickerItem> videos = await _picker.openPicker(
-        pickerOptions: HLPickerOptions(
-          mediaType: MediaType.video,
-          maxSelectedAssets: 10, // You can adjust this limit as needed
-          enablePreview: true,
-          // Ensure no max file size limit which might filter out large HDR videos
-          maxFileSize: null,
-          // Ensure no compression is applied to maintain HDR quality
-          compressQuality: 1.0,
-          // Optional: You might need to increase this if your HDR videos are long
-          maxDuration: null,
-        ),
+      // Use file_picker for multiple videos
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.video,
+        allowMultiple: true,
       );
 
-      if (videos.isEmpty) {
+      if (result == null || result.files.isEmpty) {
         _isPickerActive = false; // Unlock if no selection
         return [];
       }
 
       // Extract the paths from the selected videos
-      final List<String> videoPaths =
-          videos.map((video) => video.path).toList();
+      final List<String> videoPaths = result.paths
+          .where((path) => path != null && path.isNotEmpty)
+          .map((path) => path!)
+          .toList();
 
       // Verify files exist
       List<String> validPaths = [];

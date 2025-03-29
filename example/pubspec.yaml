@@ -21,7 +21,7 @@ dependencies:
   path_provider: ^2.1.2
   permission_handler: ^11.3.0
   video_player: ^2.6.1
-  hl_image_picker: ^1.2.16
+  file_picker: ^9.2.3
 
   fvp:
     # When depending on this package from a real application you should use:

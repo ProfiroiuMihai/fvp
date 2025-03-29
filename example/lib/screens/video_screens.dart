@@ -111,14 +111,20 @@ class _VideoScreenState extends State<VideoScreen> {
                     itemCount: _videos.length,
                     itemBuilder: (context, index) {
                       final video = _videos[index];
-                      return 
+                      return Card(
+                        child: Column(
+                          children: [
                             SizedBox(
-                              height: 200,
+                              height: 250,
                               child: VideoPlayerWidget(
                                 videoUrl: video.path,
                                 isAsset: false,
                                 showControls: true,
+                                disableHDR: true,
                               ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
